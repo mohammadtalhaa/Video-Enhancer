@@ -3,21 +3,20 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Free AI Video Enhancer</title>
+    <title>🎬 4K Cinematic Enhancer (GPU Powered)</title>
     <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-
     <div class="container">
         <header>
-            <h1>🎬 AI Video Enhancer</h1>
-            <p>Upscale to 4K &amp; apply cinematic color grading – 100% free, runs in your browser.</p>
+            <h1>🎬 4K Cinematic AI</h1>
+            <p>Upscale to 4K &amp; apply Hollywood color grading. <strong>Runs entirely on your GPU.</strong></p>
         </header>
 
-        <!-- Upload Section -->
+        <!-- Upload -->
         <section class="upload-section">
             <label for="fileInput" class="upload-btn">
-                📁 Choose Video
+                📁 Select Video
                 <input type="file" id="fileInput" accept="video/*" />
             </label>
             <span id="fileName">No file selected</span>
@@ -28,45 +27,49 @@
             <div class="setting-group">
                 <label for="networkSelect">AI Model:</label>
                 <select id="networkSelect">
-                    <option value="anime4k/cnn-2x-s">Small (Fast)</option>
-                    <option value="anime4k/cnn-2x-m" selected>Medium (Balanced)</option>
-                    <option value="anime4k/cnn-2x-l">Large (Best Quality)</option>
+                    <option value="anime4k/cnn-2x-s">Small (⚡ Fastest)</option>
+                    <option value="anime4k/cnn-2x-m" selected>Medium (🎯 Balanced)</option>
+                    <option value="anime4k/cnn-2x-l">Large (🏆 Best Quality)</option>
                 </select>
             </div>
             <div class="setting-group">
                 <label for="contentSelect">Content Type:</label>
                 <select id="contentSelect">
-                    <option value="anime">Animation / Anime</option>
+                    <option value="anime">Animation</option>
                     <option value="real" selected>Real Life</option>
                     <option value="3d">3D / Gaming</option>
                 </select>
             </div>
+            <div class="setting-group">
+                <label for="gradeToggle">🎨 Cinematic Grade:</label>
+                <input type="checkbox" id="gradeToggle" checked />
+            </div>
         </section>
 
-        <!-- Preview & Output -->
+        <!-- Video Boxes -->
         <section class="video-section">
             <div class="video-box">
-                <p>Original</p>
+                <p>📼 Original</p>
                 <video id="sourceVideo" controls muted></video>
             </div>
             <div class="video-box">
-                <p>Enhanced (4K)</p>
+                <p>✨ Enhanced (4K + Cinematic)</p>
                 <canvas id="outputCanvas"></canvas>
+                <!-- We apply CSS filters directly to the canvas for 0% CPU usage -->
             </div>
         </section>
 
         <!-- Controls -->
         <section class="controls">
-            <button id="enhanceBtn" disabled>⚡ Enhance Video</button>
-            <button id="downloadBtn" disabled>⬇️ Download Enhanced</button>
-            <div id="status">Ready</div>
+            <button id="enhanceBtn" disabled>⚡ Enhance to 4K</button>
+            <button id="downloadBtn" disabled>⬇️ Download 4K Video</button>
+            <div id="status">⏳ Loading AI Engine...</div>
         </section>
 
         <footer>
-            <p>Powered by <a href="https://github.com/sb2702/websr" target="_blank">WebSR</a> &bull; All processing happens locally in your browser.</p>
+            <p>⚡ 100% local processing. Your video never leaves your device.</p>
         </footer>
     </div>
-
     <script type="module" src="script.js"></script>
 </body>
 </html>
