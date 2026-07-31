@@ -1,24 +1,20 @@
-// 4K AI Video Enhancer — Fixed Weight URLs
-// Uses WebSR (WebGPU) for AI upscaling + CSS filter for cinematic color grading.
+// 4K AI Video Enhancer — Fixed Weight URLs with fallback
 
 import WebSR from "https://esm.sh/@websr/websr@0.0.16";
 
-// ─── Correct weight base URL (raw GitHub, verified) ───
 const WEIGHTS_BASE =
   "https://raw.githubusercontent.com/sb2702/websr/main/weights/anime4k/";
 
-// ─── Suffix map for content types ───
 const SUFFIX_MAP = {
   anime: "an",
   real: "rl",
   "3d": "3d"
 };
 
-// ─── Cinematic CSS filter (GPU, zero CPU) ───
 const CINEMATIC_FILTER =
   "contrast(1.15) saturate(1.5) brightness(1.05) sepia(0.08) hue-rotate(-8deg)";
 
-// ─── DOM refs ───
+// ─── DOM refs with fallback ───
 const els = {
   fileInput: document.getElementById("fileInput"),
   fileName: document.getElementById("fileName"),
@@ -44,54 +40,65 @@ let outputBlobUrl = null;
 let renderLoopActive = false;
 
 function setStatus(msg) {
-  els.status.textContent = msg;
+  if (els.status) els.status.textContent = msg;
 }
 
 function applyCinematicGrade() {
-  els.outputCanvas.style.filter = els.gradeToggle.checked
+  if (!els.outputCanvas) return;
+  els.outputCanvas.style.filter = els.gradeToggle?.checked
     ? CINEMATIC_FILTER
     : "none";
 }
-els.gradeToggle.addEventListener("change", applyCinematicGrade);
+
+// ─── Ensure grade toggle exists ───
+if (els.gradeToggle) {
+  els.gradeToggle.addEventListener("change", applyCinematicGrade);
+}
 applyCinematicGrade();
 
 // ─── WebGPU check ───
 if (!("gpu" in navigator)) {
   setStatus("WebGPU unavailable. Use recent Chrome/Edge on desktop.");
-  els.enhanceBtn.disabled = true;
+  if (els.enhanceBtn) els.enhanceBtn.disabled = true;
 }
 
-// ─── File loading (robust canplay) ───
-els.fileInput.addEventListener("change", (e) => {
-  const file = e.target.files?.[0];
-  if (!file) return;
-  els.fileName.textContent = file.name;
-  els.enhanceBtn.disabled = true;
-  els.downloadBtn.disabled = true;
-  if (outputBlobUrl) URL.revokeObjectURL(outputBlobUrl);
-  const url = URL.createObjectURL(file);
-  els.originalVideo.src = url;
-  els.originalVideo.load();
-  setStatus("Loading video...");
-});
+// ─── File loading ───
+if (els.fileInput) {
+  els.fileInput.addEventListener("change", (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (els.fileName) els.fileName.textContent = file.name;
+    if (els.enhanceBtn) els.enhanceBtn.disabled = true;
+    if (els.downloadBtn) els.downloadBtn.disabled = true;
+    if (outputBlobUrl) URL.revokeObjectURL(outputBlobUrl);
+    const url = URL.createObjectURL(file);
+    if (els.originalVideo) {
+      els.originalVideo.src = url;
+      els.originalVideo.load();
+    }
+    setStatus("Loading video...");
+  });
+}
 
-els.originalVideo.addEventListener("canplay", () => {
-  if (navigator.gpu) els.enhanceBtn.disabled = false;
-  setStatus("Video ready. Select model/content and click Enhance.");
-});
+if (els.originalVideo) {
+  els.originalVideo.addEventListener("canplay", () => {
+    if (navigator.gpu && els.enhanceBtn) els.enhanceBtn.disabled = false;
+    setStatus("Video ready. Select model/content and click Enhance.");
+  });
 
-els.originalVideo.addEventListener("error", () => {
-  setStatus("Cannot load video.");
-  els.enhanceBtn.disabled = true;
-});
+  els.originalVideo.addEventListener("error", () => {
+    setStatus("Cannot load video.");
+    if (els.enhanceBtn) els.enhanceBtn.disabled = true;
+  });
+}
 
-// ─── Build weight URL with correct suffix ───
+// ─── Build weight URL ───
 function getWeightUrl(modelKey, contentType) {
   const suffix = SUFFIX_MAP[contentType] || "an";
   return `${WEIGHTS_BASE}${modelKey}-${suffix}.json`;
 }
 
-// ─── Init WebSR (fetches the real weight file) ───
+// ─── Init WebSR ───
 async function initWebSR(modelKey, contentType) {
   if (websr && currentModelKey === modelKey && currentContentType === contentType) {
     return websr;
@@ -122,23 +129,27 @@ async function initWebSR(modelKey, contentType) {
   return websr;
 }
 
-// ─── Processing pipeline ───
+// ─── Processing ───
 async function processVideo() {
   const video = els.originalVideo;
   const canvas = els.outputCanvas;
-  const modelKey = els.modelSelect.value;
-  const contentType = els.contentTypeSelect.value;
 
-  els.enhanceBtn.disabled = true;
-  els.downloadBtn.disabled = true;
+  // Safely get model and content type
+  const modelKey = els.modelSelect ? els.modelSelect.value : "cnn-2x-m";
+  let contentType = els.contentTypeSelect ? els.contentTypeSelect.value : "real";
+
+  if (els.enhanceBtn) els.enhanceBtn.disabled = true;
+  if (els.downloadBtn) els.downloadBtn.disabled = true;
 
   try {
     await initWebSR(modelKey, contentType);
   } catch (err) {
     setStatus(`Error: ${err.message}`);
-    els.enhanceBtn.disabled = false;
+    if (els.enhanceBtn) els.enhanceBtn.disabled = false;
     return;
   }
+
+  if (!video || !canvas) return;
 
   canvas.width = video.videoWidth * 2;
   canvas.height = video.videoHeight * 2;
@@ -158,8 +169,8 @@ async function processVideo() {
     const blob = new Blob(recordedChunks, { type: "video/webm" });
     if (outputBlobUrl) URL.revokeObjectURL(outputBlobUrl);
     outputBlobUrl = URL.createObjectURL(blob);
-    els.downloadBtn.disabled = false;
-    els.enhanceBtn.disabled = false;
+    if (els.downloadBtn) els.downloadBtn.disabled = false;
+    if (els.enhanceBtn) els.enhanceBtn.disabled = false;
     setStatus("Done! Your 4K video is ready.");
   };
 
@@ -202,36 +213,53 @@ async function processVideo() {
   } catch (err) {
     renderLoopActive = false;
     setStatus(`Start error: ${err.message}`);
-    els.enhanceBtn.disabled = false;
+    if (els.enhanceBtn) els.enhanceBtn.disabled = false;
   }
 }
 
-els.enhanceBtn.addEventListener("click", () => {
-  processVideo().catch((err) => {
-    setStatus(`Unexpected: ${err.message}`);
-    els.enhanceBtn.disabled = false;
+// ─── Event listeners ───
+if (els.enhanceBtn) {
+  els.enhanceBtn.addEventListener("click", () => {
+    processVideo().catch((err) => {
+      setStatus(`Unexpected: ${err.message}`);
+      if (els.enhanceBtn) els.enhanceBtn.disabled = false;
+    });
   });
-});
+}
 
-els.downloadBtn.addEventListener("click", () => {
-  if (!outputBlobUrl) return;
-  const a = document.createElement("a");
-  a.href = outputBlobUrl;
-  a.download = "enhanced-4k.webm";
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-});
+if (els.downloadBtn) {
+  els.downloadBtn.addEventListener("click", () => {
+    if (!outputBlobUrl) return;
+    const a = document.createElement("a");
+    a.href = outputBlobUrl;
+    a.download = "enhanced-4k.webm";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  });
+}
 
 // ─── Re‑init when model/content changes ───
-els.modelSelect.addEventListener("change", () => {
-  websr = null;
-  if (els.originalVideo.src) initWebSR(els.modelSelect.value, els.contentTypeSelect.value);
-});
-els.contentTypeSelect.addEventListener("change", () => {
-  websr = null;
-  if (els.originalVideo.src) initWebSR(els.modelSelect.value, els.contentTypeSelect.value);
-});
+if (els.modelSelect) {
+  els.modelSelect.addEventListener("change", () => {
+    websr = null;
+    if (els.originalVideo?.src) {
+      const model = els.modelSelect.value;
+      const content = els.contentTypeSelect ? els.contentTypeSelect.value : "real";
+      initWebSR(model, content);
+    }
+  });
+}
+if (els.contentTypeSelect) {
+  els.contentTypeSelect.addEventListener("change", () => {
+    websr = null;
+    if (els.originalVideo?.src) {
+      const model = els.modelSelect ? els.modelSelect.value : "cnn-2x-m";
+      const content = els.contentTypeSelect.value;
+      initWebSR(model, content);
+    }
+  });
+}
 
 // ─── Initial status ───
 setStatus("Waiting for a video...");
