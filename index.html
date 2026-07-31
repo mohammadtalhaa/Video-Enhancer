@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Free AI Video Enhancer</title>
+    <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+    <div class="container">
+        <header>
+            <h1>🎬 AI Video Enhancer</h1>
+            <p>Upscale to 4K &amp; apply cinematic color grading – 100% free, runs in your browser.</p>
+        </header>
+
+        <!-- Upload Section -->
+        <section class="upload-section">
+            <label for="fileInput" class="upload-btn">
+                📁 Choose Video
+                <input type="file" id="fileInput" accept="video/*" />
+            </label>
+            <span id="fileName">No file selected</span>
+        </section>
+
+        <!-- Settings -->
+        <section class="settings">
+            <div class="setting-group">
+                <label for="networkSelect">AI Model:</label>
+                <select id="networkSelect">
+                    <option value="anime4k/cnn-2x-s">Small (Fast)</option>
+                    <option value="anime4k/cnn-2x-m" selected>Medium (Balanced)</option>
+                    <option value="anime4k/cnn-2x-l">Large (Best Quality)</option>
+                </select>
+            </div>
+            <div class="setting-group">
+                <label for="contentSelect">Content Type:</label>
+                <select id="contentSelect">
+                    <option value="anime">Animation / Anime</option>
+                    <option value="real" selected>Real Life</option>
+                    <option value="3d">3D / Gaming</option>
+                </select>
+            </div>
+        </section>
+
+        <!-- Preview & Output -->
+        <section class="video-section">
+            <div class="video-box">
+                <p>Original</p>
+                <video id="sourceVideo" controls muted></video>
+            </div>
+            <div class="video-box">
+                <p>Enhanced (4K)</p>
+                <canvas id="outputCanvas"></canvas>
+            </div>
+        </section>
+
+        <!-- Controls -->
+        <section class="controls">
+            <button id="enhanceBtn" disabled>⚡ Enhance Video</button>
+            <button id="downloadBtn" disabled>⬇️ Download Enhanced</button>
+            <div id="status">Ready</div>
+        </section>
+
+        <footer>
+            <p>Powered by <a href="https://github.com/sb2702/websr" target="_blank">WebSR</a> &bull; All processing happens locally in your browser.</p>
+        </footer>
+    </div>
+
+    <script type="module" src="script.js"></script>
+</body>
+</html>
