@@ -1,64 +1,75 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>🎬 4K Cinematic AI</title>
-    <!-- Cache buster: force reload of CSS -->
-    <link rel="stylesheet" href="style.css?v=3" />
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>4K AI Video Enhancer</title>
+<link rel="stylesheet" href="style.css?v=1" />
 </head>
 <body>
-    <div class="container">
-        <header>
-            <h1>🎬 4K Cinematic AI</h1>
-            <p>Upscale to 4K &amp; apply Hollywood color grading. <strong>Runs entirely on your GPU.</strong></p>
-        </header>
 
-        <section class="upload-section">
-            <label for="fileInput" class="upload-btn">
-                📁 Select Video
-                <input type="file" id="fileInput" accept="video/*" />
-            </label>
-            <span id="fileName">No file selected</span>
-        </section>
+  <header class="app-header">
+    <h1>4K AI Video Enhancer</h1>
+    <p class="subtitle">Free · 100% client-side · WebGPU AI upscaling + cinematic color grade</p>
+  </header>
 
-        <section class="settings">
-            <div class="setting-group">
-                <label for="networkSelect">AI Model:</label>
-                <select id="networkSelect">
-                    <option value="cnn-2x-s">Small (⚡ Fastest)</option>
-                    <option value="cnn-2x-m" selected>Medium (🎯 Balanced)</option>
-                    <option value="cnn-2x-l">Large (🏆 Best Quality)</option>
-                </select>
-            </div>
-            <div class="setting-group">
-                <label for="gradeToggle">🎨 Cinematic Grade:</label>
-                <input type="checkbox" id="gradeToggle" checked />
-            </div>
-        </section>
+  <main class="app-main">
 
-        <section class="video-section">
-            <div class="video-box">
-                <p>📼 Original</p>
-                <video id="sourceVideo" controls muted></video>
-            </div>
-            <div class="video-box">
-                <p>✨ Enhanced (4K + Cinematic)</p>
-                <canvas id="outputCanvas"></canvas>
-            </div>
-        </section>
+    <section class="controls-panel">
 
-        <section class="controls">
-            <button id="enhanceBtn" disabled>⚡ Enhance to 4K</button>
-            <button id="downloadBtn" disabled>⬇️ Download 4K</button>
-            <div id="status">🚀 Ready. Upload a video.</div>
-        </section>
+      <div class="control-group">
+        <label class="control-label" for="fileInput">1. Choose a video</label>
+        <div class="file-upload-row">
+          <label class="btn btn-secondary file-btn" for="fileInput">Choose Video</label>
+          <input type="file" id="fileInput" accept="video/*" hidden />
+          <span id="fileName" class="file-name">No file selected</span>
+        </div>
+      </div>
 
-        <footer>
-            <p>⚡ 100% local processing. Your video never leaves your device.</p>
-        </footer>
-    </div>
-    <!-- Cache buster: force reload of JS -->
-    <script type="module" src="script.js?v=3"></script>
+      <div class="control-group">
+        <label class="control-label" for="modelSelect">2. AI upscaling model</label>
+        <select id="modelSelect" class="select-input">
+          <option value="cnn-2x-s">Small — fastest, lower quality</option>
+          <option value="cnn-2x-m" selected>Medium — balanced</option>
+          <option value="cnn-2x-l">Large — best quality, slowest</option>
+        </select>
+      </div>
+
+      <div class="control-group control-row">
+        <label class="checkbox-row" for="gradeToggle">
+          <input type="checkbox" id="gradeToggle" checked />
+          <span>Cinematic Grade (Teal &amp; Orange)</span>
+        </label>
+      </div>
+
+      <div class="control-group control-row buttons-row">
+        <button id="enhanceBtn" class="btn btn-primary" disabled>Enhance Video</button>
+        <button id="downloadBtn" class="btn btn-accent" disabled>Download 4K Video</button>
+      </div>
+
+      <div class="control-group">
+        <div id="status" class="status-box">Waiting for a video...</div>
+      </div>
+
+    </section>
+
+    <section class="preview-panel">
+      <div class="video-pane">
+        <h2>Original</h2>
+        <video id="originalVideo" class="video-el" controls playsinline></video>
+      </div>
+      <div class="video-pane">
+        <h2>Enhanced (4K + Cinematic Grade)</h2>
+        <canvas id="outputCanvas" class="canvas-el"></canvas>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="app-footer">
+    <p>Runs entirely in your browser. Nothing is uploaded to a server.</p>
+  </footer>
+
+  <script type="module" src="script.js?v=1"></script>
 </body>
 </html>
