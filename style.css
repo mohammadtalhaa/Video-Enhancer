@@ -1,0 +1,242 @@
+/* ─── Reset & Base ─── */
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+    background: #0b0d11;
+    color: #e8edf5;
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    padding: 2rem 1rem;
+}
+
+.container {
+    max-width: 1200px;
+    width: 100%;
+}
+
+/* ─── Header ─── */
+header {
+    text-align: center;
+    margin-bottom: 2rem;
+}
+
+header h1 {
+    font-size: 2.5rem;
+    font-weight: 700;
+    background: linear-gradient(135deg, #f093fb, #f5576c, #4facfe);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+header p {
+    color: #8896b0;
+    margin-top: 0.25rem;
+}
+
+/* ─── Upload ─── */
+.upload-section {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+    background: #14181f;
+    padding: 1.25rem 1.5rem;
+    border-radius: 16px;
+    border: 1px solid #2a313c;
+    margin-bottom: 1.5rem;
+}
+
+.upload-btn {
+    display: inline-block;
+    background: #4facfe;
+    color: #fff;
+    padding: 0.6rem 1.5rem;
+    border-radius: 40px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s;
+    font-size: 0.95rem;
+    border: none;
+}
+
+.upload-btn:hover {
+    background: #3d8fdb;
+}
+
+.upload-btn input[type="file"] {
+    display: none;
+}
+
+#fileName {
+    color: #8896b0;
+    font-size: 0.9rem;
+}
+
+/* ─── Settings ─── */
+.settings {
+    display: flex;
+    gap: 2rem;
+    flex-wrap: wrap;
+    background: #14181f;
+    padding: 1rem 1.5rem;
+    border-radius: 12px;
+    border: 1px solid #2a313c;
+    margin-bottom: 1.5rem;
+}
+
+.setting-group {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+}
+
+.setting-group label {
+    font-size: 0.9rem;
+    color: #8896b0;
+    font-weight: 500;
+}
+
+.setting-group select {
+    background: #1e2630;
+    color: #e8edf5;
+    border: 1px solid #2a313c;
+    padding: 0.4rem 0.8rem;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    cursor: pointer;
+    outline: none;
+}
+
+.setting-group select:focus {
+    border-color: #4facfe;
+}
+
+/* ─── Video Section ─── */
+.video-section {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+    margin-bottom: 1.5rem;
+}
+
+@media (max-width: 768px) {
+    .video-section {
+        grid-template-columns: 1fr;
+    }
+}
+
+.video-box {
+    background: #14181f;
+    border-radius: 16px;
+    border: 1px solid #2a313c;
+    overflow: hidden;
+}
+
+.video-box p {
+    text-align: center;
+    padding: 0.6rem 0;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #8896b0;
+    background: #0f131a;
+    border-bottom: 1px solid #2a313c;
+    letter-spacing: 0.5px;
+}
+
+.video-box video,
+.video-box canvas {
+    display: block;
+    width: 100%;
+    height: auto;
+    aspect-ratio: 16 / 9;
+    background: #0b0d11;
+}
+
+.video-box canvas {
+    image-rendering: pixelated;
+}
+
+/* ─── Controls ─── */
+.controls {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+    background: #14181f;
+    padding: 1.25rem 1.5rem;
+    border-radius: 16px;
+    border: 1px solid #2a313c;
+}
+
+.controls button {
+    padding: 0.7rem 2rem;
+    border: none;
+    border-radius: 40px;
+    font-weight: 600;
+    font-size: 0.95rem;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.controls button:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+#enhanceBtn {
+    background: #f5576c;
+    color: #fff;
+}
+
+#enhanceBtn:hover:not(:disabled) {
+    background: #d94458;
+}
+
+#downloadBtn {
+    background: #4facfe;
+    color: #fff;
+}
+
+#downloadBtn:hover:not(:disabled) {
+    background: #3d8fdb;
+}
+
+#status {
+    margin-left: auto;
+    font-size: 0.9rem;
+    color: #8896b0;
+    min-width: 120px;
+    text-align: right;
+}
+
+#status.loading {
+    color: #f5a623;
+}
+
+#status.done {
+    color: #4caf50;
+}
+
+/* ─── Footer ─── */
+footer {
+    text-align: center;
+    margin-top: 2rem;
+    font-size: 0.8rem;
+    color: #4a5568;
+}
+
+footer a {
+    color: #4facfe;
+    text-decoration: none;
+}
+
+footer a:hover {
+    text-decoration: underline;
+}
