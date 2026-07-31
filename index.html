@@ -3,8 +3,9 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>🎬 4K Cinematic AI Enhancer</title>
-    <link rel="stylesheet" href="style.css" />
+    <title>🎬 4K Cinematic AI</title>
+    <!-- Cache buster: force reload of CSS -->
+    <link rel="stylesheet" href="style.css?v=3" />
 </head>
 <body>
     <div class="container">
@@ -13,7 +14,6 @@
             <p>Upscale to 4K &amp; apply Hollywood color grading. <strong>Runs entirely on your GPU.</strong></p>
         </header>
 
-        <!-- Upload -->
         <section class="upload-section">
             <label for="fileInput" class="upload-btn">
                 📁 Select Video
@@ -22,7 +22,6 @@
             <span id="fileName">No file selected</span>
         </section>
 
-        <!-- Settings -->
         <section class="settings">
             <div class="setting-group">
                 <label for="networkSelect">AI Model:</label>
@@ -38,7 +37,6 @@
             </div>
         </section>
 
-        <!-- Video Boxes -->
         <section class="video-section">
             <div class="video-box">
                 <p>📼 Original</p>
@@ -50,17 +48,17 @@
             </div>
         </section>
 
-        <!-- Controls -->
         <section class="controls">
             <button id="enhanceBtn" disabled>⚡ Enhance to 4K</button>
-            <button id="downloadBtn" disabled>⬇️ Download 4K Video</button>
-            <div id="status">⏳ Waiting for video...</div>
+            <button id="downloadBtn" disabled>⬇️ Download 4K</button>
+            <div id="status">🚀 Ready. Upload a video.</div>
         </section>
 
         <footer>
             <p>⚡ 100% local processing. Your video never leaves your device.</p>
         </footer>
     </div>
-    <script type="module" src="script.js"></script>
+    <!-- Cache buster: force reload of JS -->
+    <script type="module" src="script.js?v=3"></script>
 </body>
 </html>
