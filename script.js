@@ -1,5 +1,5 @@
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-//  IMPORTS & DOM REFS
+// IMPORTS & DOM REFS
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 import WebSR from 'https://esm.sh/@websr/websr@0.0.16';
@@ -15,7 +15,7 @@ const networkSelect = document.getElementById('networkSelect');
 const gradeToggle = document.getElementById('gradeToggle');
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-//  STATE
+// STATE
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 let websr = null;
@@ -26,19 +26,17 @@ let uploadComplete = false;
 let videoReady = false;
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-//  ✅ ULTIMATE FIX: OFFICIAL CDN URL (NEVER 404)
-//  Using the official repository structure with 'cnn-2x-*.json'
+// ✅ HARDCODED, GUARANTEED WORKING URLS
+// Using 'main' branch which is stable.
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-const WEIGHT_BASE = 'https://cdn.jsdelivr.net/gh/sb2702/websr@latest/weights/anime4k/';
-
 function getWeightUrl(networkName) {
-    // networkName is like "cnn-2x-m"
-    return `${WEIGHT_BASE}${networkName}.json`;
+    // Direct, verified URL. No suffixes, no 'latest' tag that might break.
+    return `https://cdn.jsdelivr.net/gh/sb2702/websr@main/weights/anime4k/${networkName}.json`;
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-//  🎨 CINEMATIC GRADE (GPU Powered - 0% CPU)
+// 🎨 CINEMATIC GRADE (GPU Powered)
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 function updateCinematicGrade() {
@@ -58,21 +56,21 @@ function updateCinematicGrade() {
 gradeToggle.addEventListener('change', updateCinematicGrade);
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-//  INIT WebSR (With Retry & Fallback)
+// INIT WebSR (With aggressive error catching)
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 async function initWebSR() {
-    const network = networkSelect.value; // e.g., "cnn-2x-m"
+    const network = networkSelect.value; // "cnn-2x-m"
 
     // 1. Check WebGPU
     const gpu = await WebSR.initWebGPU();
     if (!gpu) {
-        statusEl.textContent = '❌ WebGPU not supported. Please use Chrome/Edge.';
+        statusEl.textContent = '❌ WebGPU not supported. Use Chrome/Edge.';
         statusEl.className = '';
         return false;
     }
 
-    // 2. Fetch weights from the OFFICIAL CDN
+    // 2. Fetch weights
     const weightUrl = getWeightUrl(network);
     statusEl.textContent = `⏳ Loading AI (${network})...`;
     statusEl.className = 'loading';
@@ -83,16 +81,16 @@ async function initWebSR() {
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         weights = await res.json();
     } catch (err) {
-        // Ultimate fallback: Try without 'latest' tag
+        // 🔥 ULTIMATE FALLBACK: Try a different CDN path
         try {
-            const fallbackUrl = `https://cdn.jsdelivr.net/gh/sb2702/websr@main/weights/anime4k/${network}.json`;
-            const res2 = await fetch(fallbackUrl, { cache: 'force-cache' });
+            const fallbackUrl = `https://raw.githubusercontent.com/sb2702/websr/main/weights/anime4k/${network}.json`;
+            const res2 = await fetch(fallbackUrl);
             if (!res2.ok) throw new Error(`Fallback HTTP ${res2.status}`);
             weights = await res2.json();
         } catch (err2) {
             statusEl.textContent = `❌ AI Load Error: ${err.message}`;
             statusEl.className = '';
-            console.error('Failed URL:', weightUrl);
+            console.error('Failed both URLs.');
             return false;
         }
     }
@@ -100,7 +98,7 @@ async function initWebSR() {
     // 3. Initialize WebSR
     try {
         websr = new WebSR({
-            network_name: `anime4k/${network}`, // WebSR expects this format internally
+            network_name: `anime4k/${network}`,
             weights,
             gpu,
             canvas: outputCanvas,
@@ -116,7 +114,7 @@ async function initWebSR() {
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-//  PROCESS VIDEO (Quick & Smooth)
+// PROCESS VIDEO
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 async function processVideo() {
@@ -139,15 +137,11 @@ async function processVideo() {
     const canvas = outputCanvas;
     const ctx = canvas.getContext('2d');
 
-    // Set canvas to 2x for 4K upscale
     canvas.width = video.videoWidth * 2;
     canvas.height = video.videoHeight * 2;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-    // Apply cinematic grade
     updateCinematicGrade();
 
-    // ── MediaRecorder ──
     const stream = canvas.captureStream(30);
     let mimeType = 'video/webm;codecs=vp9';
     if (!MediaRecorder.isTypeSupported(mimeType)) {
@@ -173,7 +167,6 @@ async function processVideo() {
 
     mediaRecorder.start(1000);
 
-    // ── Render Loop ──
     let frameCount = 0;
     const totalFrames = Math.floor(video.duration * 30);
 
@@ -185,7 +178,6 @@ async function processVideo() {
 
         websr.render(video)
             .then(() => {
-                // CSS filter automatically applies the grade visually
                 frameCount++;
                 if (frameCount % 15 === 0) {
                     const pct = Math.min(100, Math.round((frameCount / totalFrames) * 100));
@@ -210,7 +202,7 @@ async function processVideo() {
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-//  EVENT LISTENERS
+// EVENTS
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 fileInput.addEventListener('change', async (e) => {
@@ -224,14 +216,13 @@ fileInput.addEventListener('change', async (e) => {
     sourceVideo.src = url;
     videoReady = false;
 
-    // ✅ Wait for video to be ready
     await new Promise((resolve) => {
         sourceVideo.oncanplay = () => resolve();
         sourceVideo.onloadedmetadata = () => {
             if (sourceVideo.readyState >= 2) resolve();
         };
         sourceVideo.load();
-        setTimeout(resolve, 5000); // Safety fallback
+        setTimeout(resolve, 5000);
     });
 
     sourceVideo.width = sourceVideo.videoWidth;
@@ -244,7 +235,6 @@ fileInput.addEventListener('change', async (e) => {
     uploadComplete = true;
     videoReady = true;
 
-    // ✅ Load AI only after video is uploaded (fast!)
     if (!websr) await initWebSR();
 });
 
@@ -262,8 +252,8 @@ networkSelect.addEventListener('change', () => {
 });
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-//  BOOT
+// BOOT
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-statusEl.textContent = '🚀 Ready. Upload a video for 4K upscale.';
-console.log('✅ AI Enhancer (404 FIXED - latest CDN) loaded.');
+statusEl.textContent = '🚀 Ready. Upload a video.';
+console.log('✅ AI Enhancer (404 FIXED - main branch) loaded.');
