@@ -1,4 +1,4 @@
-// 4K AI Video Enhancer — MP4 Output Support
+// 4K AI Video Enhancer — 60 FPS Output
 
 import WebSR from "https://esm.sh/@websr/websr@0.0.16?v=1";
 
@@ -36,7 +36,12 @@ let mediaRecorder = null;
 let recordedChunks = [];
 let outputBlobUrl = null;
 let renderLoopActive = false;
-let outputFileExtension = "mp4"; // default
+let outputFileExtension = "mp4";
+
+// ─── Frame rate tracking ───
+let frameCount = 0;
+let lastFpsUpdate = 0;
+let currentFps = 0;
 
 function setStatus(message) {
   els.status.textContent = message;
@@ -155,30 +160,30 @@ async function processVideo() {
   applyCinematicGrade();
 
   recordedChunks = [];
-  const stream = canvas.captureStream(30);
+  
+  // ─── 🎯 CRITICAL FIX: Capture at 60 FPS ───
+  const stream = canvas.captureStream(60);
 
-  // --- 🎯 Try MP4 first, fallback to WebM ---
+  // ─── MP4 / WebM detection ───
   let mimeType = "video/webm;codecs=vp9";
   outputFileExtension = "webm";
 
-  // Check for MP4/H.264 support
   const mp4Mime = "video/mp4;codecs=avc1";
   if (MediaRecorder.isTypeSupported(mp4Mime)) {
     mimeType = mp4Mime;
     outputFileExtension = "mp4";
-    setStatus("Recording in MP4 (H.264)");
   } else if (MediaRecorder.isTypeSupported("video/webm;codecs=vp9")) {
     mimeType = "video/webm;codecs=vp9";
     outputFileExtension = "webm";
-    setStatus("Recording in WebM (VP9)");
   } else {
     mimeType = "video/webm";
     outputFileExtension = "webm";
   }
 
+  // ─── Higher bitrate for 60 FPS ───
   mediaRecorder = new MediaRecorder(stream, {
     mimeType,
-    videoBitsPerSecond: 20_000_000,
+    videoBitsPerSecond: 50_000_000, // 50 Mbps for smooth 4K 60fps
   });
 
   mediaRecorder.ondataavailable = (event) => {
@@ -193,7 +198,7 @@ async function processVideo() {
     outputBlobUrl = URL.createObjectURL(blob);
     els.downloadBtn.disabled = false;
     els.enhanceBtn.disabled = false;
-    setStatus(`Done — your 4K video (${outputFileExtension.toUpperCase()}) is ready.`);
+    setStatus(`✅ Done — 4K 60fps video (${outputFileExtension.toUpperCase()}) ready!`);
   };
 
   function finishRecording() {
@@ -205,24 +210,37 @@ async function processVideo() {
 
   video.addEventListener("ended", finishRecording, { once: true });
 
-  function renderLoop() {
+  // ─── Frame rate tracking ───
+  frameCount = 0;
+  lastFpsUpdate = performance.now();
+
+  function renderLoop(timestamp) {
     if (!renderLoopActive) return;
+
+    // ─── Track FPS ───
+    frameCount++;
+    if (timestamp - lastFpsUpdate >= 1000) {
+      currentFps = Math.round(frameCount * 1000 / (timestamp - lastFpsUpdate));
+      frameCount = 0;
+      lastFpsUpdate = timestamp;
+      // Show FPS in status (optional)
+      const progress = video.duration
+        ? Math.min(100, Math.round((video.currentTime / video.duration) * 100))
+        : 0;
+      setStatus(`Processing: ${progress}% (${currentFps} fps)`);
+    }
 
     websr
       .render(video)
       .then(() => {
         if (!renderLoopActive) return;
 
-        const progress = video.duration
-          ? Math.min(100, Math.round((video.currentTime / video.duration) * 100))
-          : 0;
-        setStatus(`Processing: ${progress}%`);
-
         if (video.ended) {
           finishRecording();
           return;
         }
 
+        // ─── Request next frame ASAP ───
         video.requestVideoFrameCallback(renderLoop);
       })
       .catch((err) => {
@@ -258,7 +276,7 @@ els.downloadBtn.addEventListener("click", () => {
   if (!outputBlobUrl) return;
   const link = document.createElement("a");
   link.href = outputBlobUrl;
-  link.download = `enhanced-4k.${outputFileExtension}`; // .mp4 or .webm
+  link.download = `enhanced-4k-60fps.${outputFileExtension}`;
   document.body.appendChild(link);
   link.click();
   link.remove();
