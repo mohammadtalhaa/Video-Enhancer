@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>🎬 4K Cinematic Enhancer (GPU Powered)</title>
+    <title>🎬 4K Cinematic AI Enhancer</title>
     <link rel="stylesheet" href="style.css" />
 </head>
 <body>
@@ -27,17 +27,9 @@
             <div class="setting-group">
                 <label for="networkSelect">AI Model:</label>
                 <select id="networkSelect">
-                    <option value="anime4k/cnn-2x-s">Small (⚡ Fastest)</option>
-                    <option value="anime4k/cnn-2x-m" selected>Medium (🎯 Balanced)</option>
-                    <option value="anime4k/cnn-2x-l">Large (🏆 Best Quality)</option>
-                </select>
-            </div>
-            <div class="setting-group">
-                <label for="contentSelect">Content Type:</label>
-                <select id="contentSelect">
-                    <option value="anime">Animation</option>
-                    <option value="real" selected>Real Life</option>
-                    <option value="3d">3D / Gaming</option>
+                    <option value="cnn-2x-s">Small (⚡ Fastest)</option>
+                    <option value="cnn-2x-m" selected>Medium (🎯 Balanced)</option>
+                    <option value="cnn-2x-l">Large (🏆 Best Quality)</option>
                 </select>
             </div>
             <div class="setting-group">
@@ -55,7 +47,6 @@
             <div class="video-box">
                 <p>✨ Enhanced (4K + Cinematic)</p>
                 <canvas id="outputCanvas"></canvas>
-                <!-- We apply CSS filters directly to the canvas for 0% CPU usage -->
             </div>
         </section>
 
@@ -63,7 +54,7 @@
         <section class="controls">
             <button id="enhanceBtn" disabled>⚡ Enhance to 4K</button>
             <button id="downloadBtn" disabled>⬇️ Download 4K Video</button>
-            <div id="status">⏳ Loading AI Engine...</div>
+            <div id="status">⏳ Waiting for video...</div>
         </section>
 
         <footer>
