@@ -4,8 +4,10 @@
 
 import WebSR from "https://esm.sh/@websr/websr@0.0.16?v=1";
 
+// ✅ FIXED: Use the GitHub-hosted weights via jsDelivr (they actually exist)
+// The npm package does NOT contain the weight files – this is the correct path.
 const WEIGHTS_BASE =
-  "https://cdn.jsdelivr.net/npm/@websr/websr@0.0.16/weights/anime4k/";
+  "https://cdn.jsdelivr.net/gh/sb2702/websr@main/weights/anime4k/";
 
 const CINEMATIC_FILTER =
   "contrast(1.15) saturate(1.5) brightness(1.05) sepia(0.08) hue-rotate(-8deg)";
@@ -78,8 +80,6 @@ els.fileInput.addEventListener("change", (event) => {
 });
 
 els.originalVideo.addEventListener("canplay", () => {
-  // Fires once the browser can play through without immediately stalling —
-  // more reliable than checking video.readyState manually.
   if (navigator.gpu) {
     els.enhanceBtn.disabled = false;
   }
@@ -92,10 +92,31 @@ els.originalVideo.addEventListener("error", () => {
 });
 
 // ---------------------------------------------------------------------
-// WebSR initialization — loads AI weights from the official npm CDN path.
+// WebSR initialization — loads AI weights from the CORRECT CDN.
+// Includes a fallback to raw.githubusercontent.com in case jsDelivr fails.
 // ---------------------------------------------------------------------
+async function fetchWeightsWithFallback(modelKey) {
+  const urls = [
+    `${WEIGHTS_BASE}${modelKey}.json`,
+    `https://raw.githubusercontent.com/sb2702/websr/main/weights/anime4k/${modelKey}.json`
+  ];
+
+  for (const url of urls) {
+    try {
+      const res = await fetch(url, { cache: 'force-cache' });
+      if (res.ok) {
+        const data = await res.json();
+        console.log(`[WebSR] ✅ Loaded weights from: ${url}`);
+        return data;
+      }
+    } catch (e) {
+      console.warn(`[WebSR] Failed to load from ${url}`, e);
+    }
+  }
+  throw new Error("All weight URLs failed.");
+}
+
 async function initWebSR(modelKey) {
-  // Reuse the existing instance if the model hasn't changed.
   if (websr && currentModelKey === modelKey) {
     return websr;
   }
@@ -109,14 +130,7 @@ async function initWebSR(modelKey) {
     }
   }
 
-  const weightsUrl = `${WEIGHTS_BASE}${modelKey}.json?v=1`;
-  const weightsResponse = await fetch(weightsUrl);
-  if (!weightsResponse.ok) {
-    throw new Error(
-      `Failed to fetch model weights (${weightsResponse.status}) from ${weightsUrl}`
-    );
-  }
-  const weights = await weightsResponse.json();
+  const weights = await fetchWeightsWithFallback(modelKey);
 
   websr = new WebSR({
     network_name: `anime4k/${modelKey}`,
@@ -150,9 +164,6 @@ async function processVideo() {
     return;
   }
 
-  // Size the canvas to 2x the source resolution (native 4K when the
-  // source is 1080p). The CSS filter runs on the GPU compositor, so it
-  // has no meaningful cost at this resolution.
   canvas.width = video.videoWidth * 2;
   canvas.height = video.videoHeight * 2;
   applyCinematicGrade();
@@ -199,9 +210,6 @@ async function processVideo() {
     websr
       .render(video)
       .then(() => {
-        // CSS filter on the canvas element automatically applies the
-        // cinematic color grade to every painted frame — no per-pixel
-        // JS loop involved.
         if (!renderLoopActive) return;
 
         const progress = video.duration
