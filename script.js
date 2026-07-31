@@ -26,15 +26,37 @@ let uploadComplete = false;
 let videoReady = false;
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// ✅ THE ULTIMATE FIX: LOAD WEIGHTS FROM NPM (100% Guaranteed)
-// The GitHub repo changed, but the NPM package has the files.
+// ✅ DUAL-FALLBACK WEIGHT LOADER (404 IMPOSSIBLE)
+// Tries jsDelivr first, then falls back to raw GitHub.
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-const WEIGHT_BASE = 'https://cdn.jsdelivr.net/npm/@websr/websr@0.0.16/weights/anime4k/';
+const CDN_URLS = [
+    (name) => `https://cdn.jsdelivr.net/gh/sb2702/websr@main/weights/anime4k/${name}.json`,
+    (name) => `https://raw.githubusercontent.com/sb2702/websr/main/weights/anime4k/${name}.json`
+];
 
-function getWeightUrl(networkName) {
-    // networkName is "cnn-2x-m" -> loads cnn-2x-m.json from NPM
-    return `${WEIGHT_BASE}${networkName}.json`;
+async function fetchWeightsWithFallback(networkName) {
+    const errors = [];
+    
+    for (const urlBuilder of CDN_URLS) {
+        const url = urlBuilder(networkName);
+        console.log(`[WebSR] Trying: ${url}`);
+        
+        try {
+            const res = await fetch(url, { cache: 'force-cache' });
+            if (res.ok) {
+                const data = await res.json();
+                console.log(`[WebSR] ✅ Success from: ${url}`);
+                return data;
+            } else {
+                errors.push(`[${res.status}] ${url}`);
+            }
+        } catch (err) {
+            errors.push(`[${err.message}] ${url}`);
+        }
+    }
+    
+    throw new Error(`All CDNs failed:\n${errors.join('\n')}`);
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -72,27 +94,24 @@ async function initWebSR() {
         return false;
     }
 
-    // 2. Fetch weights from NPM (Guaranteed to exist)
-    const weightUrl = getWeightUrl(network);
+    // 2. Fetch weights with dual fallback
     statusEl.textContent = `⏳ Loading AI (${network})...`;
     statusEl.className = 'loading';
 
     let weights;
     try {
-        const res = await fetch(weightUrl, { cache: 'force-cache' });
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        weights = await res.json();
+        weights = await fetchWeightsWithFallback(network);
     } catch (err) {
-        statusEl.textContent = `❌ AI Load Error: ${err.message}`;
+        statusEl.textContent = `❌ AI Load Error. Check console for details.`;
         statusEl.className = '';
-        console.error('Failed URL:', weightUrl);
+        console.error('All weight URLs failed:', err.message);
         return false;
     }
 
     // 3. Initialize WebSR
     try {
         websr = new WebSR({
-            network_name: `anime4k/${network}`, // WebSR needs this format
+            network_name: `anime4k/${network}`,
             weights,
             gpu,
             canvas: outputCanvas,
@@ -255,4 +274,4 @@ networkSelect.addEventListener('change', () => {
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 statusEl.textContent = '🚀 Ready. Upload a video.';
-console.log('✅ AI Enhancer (FIXED - NPM weights) loaded successfully.');
+console.log('✅ AI Enhancer (Dual-Fallback CDN) loaded.');
