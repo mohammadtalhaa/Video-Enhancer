@@ -1,4 +1,4 @@
-// 4K AI Video Enhancer — Hybrid Version (NPM CDN + Content Type)
+// 4K AI Video Enhancer — MP4 Output Support
 
 import WebSR from "https://esm.sh/@websr/websr@0.0.16?v=1";
 
@@ -36,6 +36,7 @@ let mediaRecorder = null;
 let recordedChunks = [];
 let outputBlobUrl = null;
 let renderLoopActive = false;
+let outputFileExtension = "mp4"; // default
 
 function setStatus(message) {
   els.status.textContent = message;
@@ -88,7 +89,7 @@ els.originalVideo.addEventListener("error", () => {
   els.enhanceBtn.disabled = true;
 });
 
-// ─── Build weight URL with content suffix ───
+// ─── Build weight URL ───
 function getWeightUrl(modelKey, contentType) {
   const suffix = SUFFIX_MAP[contentType] || "rl";
   return `${WEIGHTS_BASE}${modelKey}-${suffix}.json`;
@@ -156,9 +157,24 @@ async function processVideo() {
   recordedChunks = [];
   const stream = canvas.captureStream(30);
 
-  const mimeType = MediaRecorder.isTypeSupported("video/webm;codecs=vp9")
-    ? "video/webm;codecs=vp9"
-    : "video/webm";
+  // --- 🎯 Try MP4 first, fallback to WebM ---
+  let mimeType = "video/webm;codecs=vp9";
+  outputFileExtension = "webm";
+
+  // Check for MP4/H.264 support
+  const mp4Mime = "video/mp4;codecs=avc1";
+  if (MediaRecorder.isTypeSupported(mp4Mime)) {
+    mimeType = mp4Mime;
+    outputFileExtension = "mp4";
+    setStatus("Recording in MP4 (H.264)");
+  } else if (MediaRecorder.isTypeSupported("video/webm;codecs=vp9")) {
+    mimeType = "video/webm;codecs=vp9";
+    outputFileExtension = "webm";
+    setStatus("Recording in WebM (VP9)");
+  } else {
+    mimeType = "video/webm";
+    outputFileExtension = "webm";
+  }
 
   mediaRecorder = new MediaRecorder(stream, {
     mimeType,
@@ -172,12 +188,12 @@ async function processVideo() {
   };
 
   mediaRecorder.onstop = () => {
-    const blob = new Blob(recordedChunks, { type: "video/webm" });
+    const blob = new Blob(recordedChunks, { type: mediaRecorder.mimeType });
     if (outputBlobUrl) URL.revokeObjectURL(outputBlobUrl);
     outputBlobUrl = URL.createObjectURL(blob);
     els.downloadBtn.disabled = false;
     els.enhanceBtn.disabled = false;
-    setStatus("Done — your 4K video is ready to download.");
+    setStatus(`Done — your 4K video (${outputFileExtension.toUpperCase()}) is ready.`);
   };
 
   function finishRecording() {
@@ -242,7 +258,7 @@ els.downloadBtn.addEventListener("click", () => {
   if (!outputBlobUrl) return;
   const link = document.createElement("a");
   link.href = outputBlobUrl;
-  link.download = "enhanced-4k.webm";
+  link.download = `enhanced-4k.${outputFileExtension}`; // .mp4 or .webm
   document.body.appendChild(link);
   link.click();
   link.remove();
