@@ -1,21 +1,29 @@
-// 4K AI Video Enhancer — client-side engine
-// Uses WebSR (WebGPU) for AI upscaling and a GPU-accelerated CSS filter for
-// the "Teal & Orange" cinematic color grade.
+// 4K AI Video Enhancer — Fixed Weight URLs
+// Uses WebSR (WebGPU) for AI upscaling + CSS filter for cinematic color grading.
 
-import WebSR from "https://esm.sh/@websr/websr@0.0.16?v=1";
+import WebSR from "https://esm.sh/@websr/websr@0.0.16";
 
-// ✅ FIXED: Use the GitHub-hosted weights via jsDelivr (they actually exist)
-// The npm package does NOT contain the weight files – this is the correct path.
+// ─── Correct weight base URL (raw GitHub, verified) ───
 const WEIGHTS_BASE =
-  "https://cdn.jsdelivr.net/gh/sb2702/websr@main/weights/anime4k/";
+  "https://raw.githubusercontent.com/sb2702/websr/main/weights/anime4k/";
 
+// ─── Suffix map for content types ───
+const SUFFIX_MAP = {
+  anime: "an",
+  real: "rl",
+  "3d": "3d"
+};
+
+// ─── Cinematic CSS filter (GPU, zero CPU) ───
 const CINEMATIC_FILTER =
   "contrast(1.15) saturate(1.5) brightness(1.05) sepia(0.08) hue-rotate(-8deg)";
 
+// ─── DOM refs ───
 const els = {
   fileInput: document.getElementById("fileInput"),
   fileName: document.getElementById("fileName"),
   modelSelect: document.getElementById("modelSelect"),
+  contentTypeSelect: document.getElementById("contentTypeSelect"),
   gradeToggle: document.getElementById("gradeToggle"),
   enhanceBtn: document.getElementById("enhanceBtn"),
   downloadBtn: document.getElementById("downloadBtn"),
@@ -24,17 +32,19 @@ const els = {
   outputCanvas: document.getElementById("outputCanvas"),
 };
 
+// ─── State ───
 let gpuDevice = null;
 let websr = null;
 let currentModelKey = null;
+let currentContentType = null;
 
 let mediaRecorder = null;
 let recordedChunks = [];
 let outputBlobUrl = null;
 let renderLoopActive = false;
 
-function setStatus(message) {
-  els.status.textContent = message;
+function setStatus(msg) {
+  els.status.textContent = msg;
 }
 
 function applyCinematicGrade() {
@@ -42,82 +52,48 @@ function applyCinematicGrade() {
     ? CINEMATIC_FILTER
     : "none";
 }
-
 els.gradeToggle.addEventListener("change", applyCinematicGrade);
 applyCinematicGrade();
 
-// ---------------------------------------------------------------------
-// WebGPU capability check
-// ---------------------------------------------------------------------
+// ─── WebGPU check ───
 if (!("gpu" in navigator)) {
-  setStatus(
-    "WebGPU is not available in this browser. Try a recent Chrome/Edge on desktop."
-  );
+  setStatus("WebGPU unavailable. Use recent Chrome/Edge on desktop.");
   els.enhanceBtn.disabled = true;
 }
 
-// ---------------------------------------------------------------------
-// File loading — uses `canplay`, not readyState polling, to avoid the
-// "stuck on loading" bug some browsers trigger with readyState checks.
-// ---------------------------------------------------------------------
-els.fileInput.addEventListener("change", (event) => {
-  const file = event.target.files && event.target.files[0];
+// ─── File loading (robust canplay) ───
+els.fileInput.addEventListener("change", (e) => {
+  const file = e.target.files?.[0];
   if (!file) return;
-
   els.fileName.textContent = file.name;
   els.enhanceBtn.disabled = true;
   els.downloadBtn.disabled = true;
-
-  if (outputBlobUrl) {
-    URL.revokeObjectURL(outputBlobUrl);
-    outputBlobUrl = null;
-  }
-
-  const objectUrl = URL.createObjectURL(file);
-  els.originalVideo.src = objectUrl;
+  if (outputBlobUrl) URL.revokeObjectURL(outputBlobUrl);
+  const url = URL.createObjectURL(file);
+  els.originalVideo.src = url;
   els.originalVideo.load();
   setStatus("Loading video...");
 });
 
 els.originalVideo.addEventListener("canplay", () => {
-  if (navigator.gpu) {
-    els.enhanceBtn.disabled = false;
-  }
-  setStatus("Video ready. Choose a model and click Enhance.");
+  if (navigator.gpu) els.enhanceBtn.disabled = false;
+  setStatus("Video ready. Select model/content and click Enhance.");
 });
 
 els.originalVideo.addEventListener("error", () => {
-  setStatus("Could not load this video file.");
+  setStatus("Cannot load video.");
   els.enhanceBtn.disabled = true;
 });
 
-// ---------------------------------------------------------------------
-// WebSR initialization — loads AI weights from the CORRECT CDN.
-// Includes a fallback to raw.githubusercontent.com in case jsDelivr fails.
-// ---------------------------------------------------------------------
-async function fetchWeightsWithFallback(modelKey) {
-  const urls = [
-    `${WEIGHTS_BASE}${modelKey}.json`,
-    `https://raw.githubusercontent.com/sb2702/websr/main/weights/anime4k/${modelKey}.json`
-  ];
-
-  for (const url of urls) {
-    try {
-      const res = await fetch(url, { cache: 'force-cache' });
-      if (res.ok) {
-        const data = await res.json();
-        console.log(`[WebSR] ✅ Loaded weights from: ${url}`);
-        return data;
-      }
-    } catch (e) {
-      console.warn(`[WebSR] Failed to load from ${url}`, e);
-    }
-  }
-  throw new Error("All weight URLs failed.");
+// ─── Build weight URL with correct suffix ───
+function getWeightUrl(modelKey, contentType) {
+  const suffix = SUFFIX_MAP[contentType] || "an";
+  return `${WEIGHTS_BASE}${modelKey}-${suffix}.json`;
 }
 
-async function initWebSR(modelKey) {
-  if (websr && currentModelKey === modelKey) {
+// ─── Init WebSR (fetches the real weight file) ───
+async function initWebSR(modelKey, contentType) {
+  if (websr && currentModelKey === modelKey && currentContentType === contentType) {
     return websr;
   }
 
@@ -125,12 +101,13 @@ async function initWebSR(modelKey) {
 
   if (!gpuDevice) {
     gpuDevice = await WebSR.initWebGPU();
-    if (!gpuDevice) {
-      throw new Error("This browser/device doesn't support WebGPU.");
-    }
+    if (!gpuDevice) throw new Error("WebGPU not supported.");
   }
 
-  const weights = await fetchWeightsWithFallback(modelKey);
+  const weightUrl = getWeightUrl(modelKey, contentType);
+  const resp = await fetch(weightUrl);
+  if (!resp.ok) throw new Error(`Failed to fetch weights (${resp.status}) from ${weightUrl}`);
+  const weights = await resp.json();
 
   websr = new WebSR({
     network_name: `anime4k/${modelKey}`,
@@ -140,26 +117,25 @@ async function initWebSR(modelKey) {
   });
 
   currentModelKey = modelKey;
+  currentContentType = contentType;
   setStatus("AI model loaded.");
   return websr;
 }
 
-// ---------------------------------------------------------------------
-// Processing pipeline: upscale via WebSR, grade via CSS filter (GPU),
-// capture the canvas as a stream, and record it with MediaRecorder.
-// ---------------------------------------------------------------------
+// ─── Processing pipeline ───
 async function processVideo() {
   const video = els.originalVideo;
   const canvas = els.outputCanvas;
   const modelKey = els.modelSelect.value;
+  const contentType = els.contentTypeSelect.value;
 
   els.enhanceBtn.disabled = true;
   els.downloadBtn.disabled = true;
 
   try {
-    await initWebSR(modelKey);
+    await initWebSR(modelKey, contentType);
   } catch (err) {
-    setStatus(`Error loading AI model: ${err.message}`);
+    setStatus(`Error: ${err.message}`);
     els.enhanceBtn.disabled = false;
     return;
   }
@@ -170,63 +146,48 @@ async function processVideo() {
 
   recordedChunks = [];
   const stream = canvas.captureStream(30);
-
   const mimeType = MediaRecorder.isTypeSupported("video/webm;codecs=vp9")
     ? "video/webm;codecs=vp9"
     : "video/webm";
 
-  mediaRecorder = new MediaRecorder(stream, {
-    mimeType,
-    videoBitsPerSecond: 20_000_000,
-  });
-
-  mediaRecorder.ondataavailable = (event) => {
-    if (event.data && event.data.size > 0) {
-      recordedChunks.push(event.data);
-    }
+  mediaRecorder = new MediaRecorder(stream, { mimeType, videoBitsPerSecond: 20_000_000 });
+  mediaRecorder.ondataavailable = (ev) => {
+    if (ev.data?.size) recordedChunks.push(ev.data);
   };
-
   mediaRecorder.onstop = () => {
     const blob = new Blob(recordedChunks, { type: "video/webm" });
     if (outputBlobUrl) URL.revokeObjectURL(outputBlobUrl);
     outputBlobUrl = URL.createObjectURL(blob);
     els.downloadBtn.disabled = false;
     els.enhanceBtn.disabled = false;
-    setStatus("Done — your 4K video is ready to download.");
+    setStatus("Done! Your 4K video is ready.");
   };
 
   function finishRecording() {
     renderLoopActive = false;
-    if (mediaRecorder && mediaRecorder.state !== "inactive") {
-      mediaRecorder.stop();
-    }
+    if (mediaRecorder?.state !== "inactive") mediaRecorder.stop();
   }
-
   video.addEventListener("ended", finishRecording, { once: true });
 
   function renderLoop() {
     if (!renderLoopActive) return;
-
     websr
       .render(video)
       .then(() => {
         if (!renderLoopActive) return;
-
         const progress = video.duration
           ? Math.min(100, Math.round((video.currentTime / video.duration) * 100))
           : 0;
         setStatus(`Processing: ${progress}%`);
-
         if (video.ended) {
           finishRecording();
           return;
         }
-
         video.requestVideoFrameCallback(renderLoop);
       })
       .catch((err) => {
         renderLoopActive = false;
-        setStatus(`Rendering error: ${err.message}`);
+        setStatus(`Render error: ${err.message}`);
       });
   }
 
@@ -240,24 +201,37 @@ async function processVideo() {
     video.requestVideoFrameCallback(renderLoop);
   } catch (err) {
     renderLoopActive = false;
-    setStatus(`Could not start processing: ${err.message}`);
+    setStatus(`Start error: ${err.message}`);
     els.enhanceBtn.disabled = false;
   }
 }
 
 els.enhanceBtn.addEventListener("click", () => {
   processVideo().catch((err) => {
-    setStatus(`Unexpected error: ${err.message}`);
+    setStatus(`Unexpected: ${err.message}`);
     els.enhanceBtn.disabled = false;
   });
 });
 
 els.downloadBtn.addEventListener("click", () => {
   if (!outputBlobUrl) return;
-  const link = document.createElement("a");
-  link.href = outputBlobUrl;
-  link.download = "enhanced-4k.webm";
-  document.body.appendChild(link);
-  link.click();
-  link.remove();
+  const a = document.createElement("a");
+  a.href = outputBlobUrl;
+  a.download = "enhanced-4k.webm";
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
 });
+
+// ─── Re‑init when model/content changes ───
+els.modelSelect.addEventListener("change", () => {
+  websr = null;
+  if (els.originalVideo.src) initWebSR(els.modelSelect.value, els.contentTypeSelect.value);
+});
+els.contentTypeSelect.addEventListener("change", () => {
+  websr = null;
+  if (els.originalVideo.src) initWebSR(els.modelSelect.value, els.contentTypeSelect.value);
+});
+
+// ─── Initial status ───
+setStatus("Waiting for a video...");
